@@ -11,7 +11,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
  /****************************************************************************
  * Pre-processor Definitions
@@ -37,19 +36,17 @@
 #define STM32_GPIO_MODER_OFFSET   0x0000  /* GPIO port mode register */
 #define STM32_GPIO_OTYPER_OFFSET  0x0004  /* GPIO port output type register */
 #define STM32_GPIO_PUPDR_OFFSET   0x000c  /* GPIO port pull-up/pull-down register */
+#define STM32_GPIO_IDR_OFFSET     0x0010  /* GPIO port input data register */
 #define STM32_GPIO_ODR_OFFSET     0x0014  /* GPIO port output data register */
 #define STM32_GPIO_BSRR_OFFSET    0x0018  /* GPIO port bit set/reset register */
-
 
 /* Register Addresses *******************************************************/
 
 #define STM32_RCC_AHB1ENR        (STM32_RCC_BASE+STM32_RCC_AHB1ENR_OFFSET)
 
 #define STM32_GPIOA_MODER        (STM32_GPIOA_BASE+STM32_GPIO_MODER_OFFSET)
-#define STM32_GPIOA_OTYPER       (STM32_GPIOA_BASE+STM32_GPIO_OTYPER_OFFSET)
 #define STM32_GPIOA_PUPDR        (STM32_GPIOA_BASE+STM32_GPIO_PUPDR_OFFSET)
-#define STM32_GPIOA_ODR          (STM32_GPIOA_BASE+STM32_GPIO_ODR_OFFSET)
-#define STM32_GPIOA_BSRR         (STM32_GPIOA_BASE+STM32_GPIO_BSRR_OFFSET)
+#define STM32_GPIOA_IDR          (STM32_GPIOA_BASE+STM32_GPIO_IDR_OFFSET)
 
 #define STM32_GPIOC_MODER        (STM32_GPIOC_BASE+STM32_GPIO_MODER_OFFSET)
 #define STM32_GPIOC_OTYPER       (STM32_GPIOC_BASE+STM32_GPIO_OTYPER_OFFSET)
@@ -89,9 +86,9 @@
 #define GPIO_PUPDR_SHIFT(n)        (n << 1)
 #define GPIO_PUPDR_MASK(n)         (3 << (n << 1))
 
-/* GPIO port output data register */
+/* GPIO port input data register */
 
-#define GPIO_ODR_MASK(n)           (1 << n)
+#define GPIO_IDR_MASK(n)           (1 << n)
 
 /* GPIO port bit set/reset register */
 
@@ -136,31 +133,25 @@ void delay(uint32_t tick)
 int main(int argc, char *argv[])
 {
   uint32_t reg;
-  bool key;
+  uint32_t key_pressed;
 
   /* Ponteiros para registradores */
 
   uint32_t *pRCC_AHB1ENR  = (uint32_t *)STM32_RCC_AHB1ENR;
 
   uint32_t *pGPIOA_MODER  = (uint32_t *)STM32_GPIOA_MODER;
-  uint32_t *pGPIOA_OTYPER = (uint32_t *)STM32_GPIOA_OTYPER;
   uint32_t *pGPIOA_PUPDR  = (uint32_t *)STM32_GPIOA_PUPDR;
-  uint32_t *pGPIOA_ODR    = (uint32_t *)STM32_GPIOA_ODR;
+  uint32_t *pGPIOA_IDR    = (uint32_t *)STM32_GPIOA_IDR;
 
   uint32_t *pGPIOC_MODER  = (uint32_t *)STM32_GPIOC_MODER;
   uint32_t *pGPIOC_OTYPER = (uint32_t *)STM32_GPIOC_OTYPER;
   uint32_t *pGPIOC_PUPDR  = (uint32_t *)STM32_GPIOC_PUPDR;
   uint32_t *pGPIOC_BSRR   = (uint32_t *)STM32_GPIOC_BSRR;
 
-  /* Habilita clock GPIOA */
+  /* Habilita clock GPIOA e GPIOC */
 
-  reg  = *pRCC_AHB1ENR;
+  reg = *pRCC_AHB1ENR;
   reg |= RCC_AHB1ENR_GPIOAEN;
-  *pRCC_AHB1ENR = reg;
-
-  /* Habilita clock GPIOC */
-
-  reg  = *pRCC_AHB1ENR;
   reg |= RCC_AHB1ENR_GPIOCEN;
   *pRCC_AHB1ENR = reg;
 
@@ -170,11 +161,6 @@ int main(int argc, char *argv[])
   reg &= ~GPIO_MODER_MASK(0);
   reg |= (GPIO_MODER_INPUT << GPIO_MODER_SHIFT(0));
   *pGPIOA_MODER = reg;
-
-  reg = *pGPIOA_OTYPER;
-  reg &= ~GPIO_OT_MASK(0);
-  reg |= (GPIO_OTYPER_PP << GPIO_OT_SHIFT(0));
-  *pGPIOA_OTYPER = reg;
 
   reg = *pGPIOA_PUPDR;
   reg &= ~GPIO_PUPDR_MASK(0);
@@ -201,14 +187,14 @@ int main(int argc, char *argv[])
   while(1)
   {
 
-    reg = *pGPIOA_ODR;
-    reg &= ~GPIO_ODR_MASK(0);
-    key = (bool)reg;
+    reg = *pGPIOA_IDR;
+    reg &= GPIO_IDR_MASK(0);
+    key_pressed = !reg;
 
     /* Liga LED */
 
     *pGPIOC_BSRR = GPIO_BSRR_RESET(13);
-    if (key)
+    if (key_pressed)
       delay(LED_DELAY_LOW);
     else
       delay(LED_DELAY_HIGH);
@@ -216,7 +202,7 @@ int main(int argc, char *argv[])
     /* Desliga LED */
 
     *pGPIOC_BSRR = GPIO_BSRR_SET(13);
-    if (key)
+    if (key_pressed)
       delay(LED_DELAY_LOW);
     else
       delay(LED_DELAY_HIGH);
