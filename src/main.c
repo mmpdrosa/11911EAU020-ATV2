@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
  /****************************************************************************
  * Pre-processor Definitions
@@ -126,6 +127,14 @@ void delay(uint32_t tick)
     }
 }
 
+bool key_pressed(uint32_t *pGPIOA_IDR)
+{
+  uint32_t reg;
+  reg = *pGPIOA_IDR;
+  reg &= GPIO_IDR_MASK(0);
+  return !reg;
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -133,7 +142,6 @@ void delay(uint32_t tick)
 int main(int argc, char *argv[])
 {
   uint32_t reg;
-  uint32_t key_pressed;
 
   /* Ponteiros para registradores */
 
@@ -186,26 +194,15 @@ int main(int argc, char *argv[])
 
   while(1)
   {
-
-    reg = *pGPIOA_IDR;
-    reg &= GPIO_IDR_MASK(0);
-    key_pressed = !reg;
-
     /* Liga LED */
 
     *pGPIOC_BSRR = GPIO_BSRR_RESET(13);
-    if (key_pressed)
-      delay(LED_DELAY_LOW);
-    else
-      delay(LED_DELAY_HIGH);
+    delay(key_pressed(pGPIOA_IDR) ? LED_DELAY_LOW : LED_DELAY_HIGH);
 
     /* Desliga LED */
 
     *pGPIOC_BSRR = GPIO_BSRR_SET(13);
-    if (key_pressed)
-      delay(LED_DELAY_LOW);
-    else
-      delay(LED_DELAY_HIGH);
+    delay(key_pressed(pGPIOA_IDR) ? LED_DELAY_LOW : LED_DELAY_HIGH);
   }
 
   /* Nunca deveria chegar aqui */
